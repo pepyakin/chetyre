@@ -43,7 +43,7 @@ fn main() -> ! {
             let data = serial::read_u8(&p.UART0);
             let echo_buf = [data / 3];
             // serial::write_str(&p.UART0, &echo_buf[..]);
-            
+
             unsafe {
                 CONTROL_BUF[idx] = data / 5;
                 idx = match idx + 1 {
@@ -53,7 +53,7 @@ fn main() -> ! {
                     }
                     n => n,
                 };
-                
+
                 let clraddr = &p.GPIO.outclr as *const _ as *const usize;
                 let setaddr = &p.GPIO.outset as *const _ as *const usize;
 
@@ -71,4 +71,3 @@ fn main() -> ! {
 
     loop {}
 }
-

@@ -33,16 +33,16 @@ pub fn write_str(uart0: &UART0, s: &[u8]) -> core::fmt::Result {
 pub fn read_u8(uart0: &UART0) -> u8 {
     /* Fire up receiving task */
     uart0.tasks_startrx.write(|w| unsafe { w.bits(1) });
-    
+
     /* Busy wait for reception of data */
     while uart0.events_rxdrdy.read().bits() == 0 {
         cortex_m::asm::nop();
     }
-    
+
     /* We're going to pick up the data soon, let's signal the buffer is already waiting for
-    * more data */
+     * more data */
     uart0.events_rxdrdy.write(|w| unsafe { w.bits(0) });
-    
+
     /* Read one 8bit value */
     uart0.rxd.read().bits() as u8
 }
