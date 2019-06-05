@@ -1,7 +1,7 @@
 use serial::SerialPort;
 use std::env;
 use std::net::UdpSocket;
-use std::io::Write;
+use std::io::{Write, Read};
 
 const SETTINGS: serial::PortSettings = serial::PortSettings {
     baud_rate: serial::Baud115200,
@@ -26,12 +26,19 @@ fn main() -> std::io::Result<()> {
     let udp = UdpSocket::bind("127.0.0.1:49161")?;
 
     loop {
+        // Receive the command via socket and display it.
         let mut buf = [0; 10];
         let (amt, _src) = udp.recv_from(&mut buf)?;
         let cmd = String::from_utf8_lossy(&buf[0..amt]).to_owned();
-
         println!("received: {}", cmd);
-
+        
+        // Write the command into the serial port.
         write!(port, "{}", cmd)?;
+        
+        // Read data from the serial port and display it.
+        let mut read_buf = [0; 10];
+        if let Ok(size) = port.read(&mut read_buf) {
+            println!("device sent: {:?}", &read_buf[0..size]);
+        }
     }
 }

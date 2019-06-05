@@ -27,7 +27,7 @@ extern "C" {
 fn main() -> ! {
     if let Some(p) = Peripherals::take() {
         serial::init(&p);
-        serial::write_str(&p.UART0, "hello world!\r\n");
+        serial::write_str(&p.UART0, b"hello world!\r\n");
 
         // Configure the pin 1 to be output.
         // Weird thing, that on my microbit I can't make pin 0 to work.
@@ -37,19 +37,23 @@ fn main() -> ! {
         // *shrug.jpg*
         p.GPIO.pin_cnf[1].write(|w| w.dir().output());
 
-        // Initial seed for PRNG. There is a hardware random number generator in 
-        // nRF51, so I should consider using it for getting the initial seed.
-        let mut seed = 1337u32;
+        let mut idx = 0usize;
 
         loop {
-            for i in 0..SUBLED_COUNT {
-                unsafe {
-                    seed = xorshift32(seed);
-                    CONTROL_BUF[i] = (seed as u8) / 8; // `/ 8` is an attempt to decrease the brightness.
-                }
-            }
-
+            let data = serial::read_u8(&p.UART0);
+            let echo_buf = [data / 3];
+            // serial::write_str(&p.UART0, &echo_buf[..]);
+            
             unsafe {
+                CONTROL_BUF[idx] = data / 5;
+                idx = match idx + 1 {
+                    SUBLED_COUNT => {
+                        CONTROL_BUF.iter_mut().for_each(|v| *v = 0);
+                        0
+                    }
+                    n => n,
+                };
+                
                 let clraddr = &p.GPIO.outclr as *const _ as *const usize;
                 let setaddr = &p.GPIO.outset as *const _ as *const usize;
 
@@ -62,21 +66,9 @@ fn main() -> ! {
                     SUBLED_COUNT,
                 );
             }
-
-            for _ in 0..1_000_000 {
-                cortex_m::asm::nop();
-            }
         }
     }
 
     loop {}
 }
 
-/// xorshift32 is the simplest routine that gives you random numbers.
-fn xorshift32(state: u32) -> u32 {
-    let mut x = state;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    x
-}
