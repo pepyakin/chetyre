@@ -1,10 +1,18 @@
+# Overview
+
+This is the firmware of servant. It is built for microbit, which uses nRF51822. There is already
+the [nrf51822] crate, but for [historical reasons][nrf51#6] I ended up with stiching different 
+chunks and doing some parts myself.
+
+The reference document I am using is [this one][nRF51 RM].
+
+This project is only tested on macOS.
+
 # Flasing
 
 Execute `./flash.sh`.
 
 # Serial port
-
-The following is tested on macOS:
 
 1. Find an appropriate device with a path similar to /dev/cu.usbmodem<number>
 2. Then `screen /dev/cu.usbmodem<number> 115200`
@@ -24,3 +32,6 @@ and then run the following in gdb:
 target remote :3333
 ```
 
+[nRF51 RM]: https://infocenter.nordicsemi.com/pdf/nRF51_RM_v3.0.pdf
+[nrf51822]: https://crates.io/crates/nrf51822
+[nrf51#6]: https://github.com/nrf-rs/nrf51/issues/6
