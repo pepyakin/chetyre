@@ -1,0 +1,21 @@
+[package]
+name = "microbit-rust"
+version = "0.1.0"
+authors = ["Sergey Pepyakin <s.pepyakin@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cortex-m = "0.5.8"
+cortex-m-rt = "0.6.7"
+nb = "0.1.1"
+panic-halt = "0.2.0"
+# More accurate definition of nrf51822 than provided by nrf51.
+nrf51822 = { path = "nrf51822" }
+
+[build-dependencies]
+cc = "1.0.29"
+
+[profile.release]
+opt-level = 3
+debug = true
+lto = true

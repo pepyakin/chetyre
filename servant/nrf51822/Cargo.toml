@@ -1,0 +1,21 @@
+[package]
+name = "nrf51822"
+version = "0.1.0"
+authors = ["Sergey Pepyakin <s.pepyakin@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cortex-m = "0.5.8"
+vcell = "0.1.0"
+
+[dependencies.bare-metal]
+features = ["const-fn"]
+version = "0.2.4"
+
+[dependencies.cortex-m-rt]
+optional = true
+version = "0.6.7"
+
+[features]
+default = ["rt"]
+rt = ["cortex-m-rt/device"]
