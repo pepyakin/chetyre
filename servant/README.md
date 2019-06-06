@@ -38,6 +38,19 @@ and then run the following in gdb:
 target remote :3333
 ```
 
+This command will load symbols from the specified ELF. However, I didn't have luck using this
+command.
+
+```
+symbol-file target/thumbv6m-none-eabi/release/microbit-rust
+```
+
+If things are going really bad you can use this command:
+
+```
+arm-none-eabi-objdump -D -M force-thumb target/thumbv6m-none-eabi/release/microbit-rust
+```
+
 [nRF51 RM]: https://infocenter.nordicsemi.com/pdf/nRF51_RM_v3.0.pdf
 [nrf51822]: https://crates.io/crates/nrf51822
 [nrf51#6]: https://github.com/nrf-rs/nrf51/issues/6
