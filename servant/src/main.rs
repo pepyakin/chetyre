@@ -40,19 +40,19 @@ fn main() -> ! {
         let mut idx = 0usize;
 
         loop {
-            let data = serial::read_u8(&p.UART0);
-            let echo_buf = [data / 3];
-            // serial::write_str(&p.UART0, &echo_buf[..]);
+            unsafe {
+                CONTROL_BUF.iter_mut().for_each(|v| *v = 0);
+            }
+
+            let idx = (serial::read_u8(&p.UART0) as usize) * 3;
+            let r = serial::read_u8(&p.UART0);
+            let g = serial::read_u8(&p.UART0);
+            let b = serial::read_u8(&p.UART0);
 
             unsafe {
-                CONTROL_BUF[idx] = data / 5;
-                idx = match idx + 1 {
-                    SUBLED_COUNT => {
-                        CONTROL_BUF.iter_mut().for_each(|v| *v = 0);
-                        0
-                    }
-                    n => n,
-                };
+                CONTROL_BUF[idx + 0] = g;
+                CONTROL_BUF[idx + 1] = r;
+                CONTROL_BUF[idx + 2] = b;
 
                 let clraddr = &p.GPIO.outclr as *const _ as *const usize;
                 let setaddr = &p.GPIO.outset as *const _ as *const usize;
