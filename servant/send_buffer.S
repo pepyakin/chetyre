@@ -1,5 +1,5 @@
 /*
- Adopted from [pxt-neopixel][0]
+ Adapted from [pxt-neopixel][0]
 
  [0]: https://github.com/Microsoft/pxt-ws2812b/blob/8346f740b179f7eb2f4f491d7f4718ce691ec666/sendBuffer.asm
 */
@@ -7,10 +7,10 @@
 .syntax unified
 
 /*
-sendBufferAsm(unused, mask, clraddr, setaddr, ptr, length)
+send_buf_ws2818(unused, mask, clraddr, setaddr, ptr, length)
 */
-.globl sendBufferAsm
-sendBufferAsm:
+.globl send_buf_ws2818
+send_buf_ws2818:
 
     push {r4,r5,r6,r7,lr}
 

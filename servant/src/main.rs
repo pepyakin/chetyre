@@ -4,23 +4,22 @@
 use cortex_m_rt::entry;
 use panic_halt;
 
-use nrf51822::{spis1::semstat::SEMSTATR, Peripherals};
+use nrf51822::{
+    Peripherals,
+    UART0,
+};
 
+mod canvas;
 mod serial;
 
-/// I have 1m 60LEDs. 1 LED consits of 3 sub-LEDs, one for each color.
-const SUBLED_COUNT: usize = 180;
-static mut CONTROL_BUF: &mut [u8] = &mut [0; SUBLED_COUNT];
+use canvas::{Color, Canvas};
 
-extern "C" {
-    fn sendBufferAsm(
-        unused: usize,
-        mask: usize,
-        clraddr: *const usize,
-        setaddr: *const usize,
-        ptr: *const u8,
-        length: usize,
-    );
+fn read_color(uart0: &UART0) -> Color {
+    let r = serial::read_u8(uart0);
+    let g = serial::read_u8(uart0);
+    let b = serial::read_u8(uart0);
+
+    Color { g, r, b }
 }
 
 #[entry]
@@ -37,35 +36,22 @@ fn main() -> ! {
         // *shrug.jpg*
         p.GPIO.pin_cnf[1].write(|w| w.dir().output());
 
-        let mut idx = 0usize;
+        let mut canvas = Canvas::new();
 
         loop {
-            unsafe {
-                CONTROL_BUF.iter_mut().for_each(|v| *v = 0);
+            // Read the full command.
+            let idx = serial::read_u8(&p.UART0) as usize;
+            let color = read_color(&p.UART0);
+
+            // Then clear the canvas and attempt to write the command.
+            canvas.clear();
+            match canvas.at_mut(idx) {
+                Some(led) => *led = color,
+                _ => {},
             }
 
-            let idx = (serial::read_u8(&p.UART0) as usize) * 3;
-            let r = serial::read_u8(&p.UART0);
-            let g = serial::read_u8(&p.UART0);
-            let b = serial::read_u8(&p.UART0);
-
-            unsafe {
-                CONTROL_BUF[idx + 0] = g;
-                CONTROL_BUF[idx + 1] = r;
-                CONTROL_BUF[idx + 2] = b;
-
-                let clraddr = &p.GPIO.outclr as *const _ as *const usize;
-                let setaddr = &p.GPIO.outset as *const _ as *const usize;
-
-                sendBufferAsm(
-                    0,
-                    1 << 1, // bitmask for pin 1
-                    clraddr,
-                    setaddr,
-                    CONTROL_BUF.as_ptr() as *const _,
-                    SUBLED_COUNT,
-                );
-            }
+            // Flush in any case.
+            canvas.flush(&p.GPIO);
         }
     }
 
