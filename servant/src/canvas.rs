@@ -1,8 +1,6 @@
 
 use nrf51822::GPIO;
-
-/// I have 1m 60LEDs. 1 LED consits of 3 sub-LEDs, one for each color.
-const LED_COUNT: usize = 60;
+use crate::LED_COUNT;
 
 /// A color represented in 24-bit GRB format (the same at the strip).
 #[derive(Copy, Clone)]
