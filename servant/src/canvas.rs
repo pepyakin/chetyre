@@ -30,10 +30,10 @@ impl Color {
     }
 
     /// Substract all components by the specific amount.
-    pub fn decay(&mut self, by: u8) {
-        self.g = self.g.saturating_sub(by);
-        self.r = self.r.saturating_sub(by);
-        self.b = self.b.saturating_sub(by);
+    pub fn decay(&mut self, g: u8, r: u8, b: u8) {
+        self.g = self.g.saturating_sub(g);
+        self.r = self.r.saturating_sub(r);
+        self.b = self.b.saturating_sub(b);
     }
 }
 

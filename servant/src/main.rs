@@ -36,7 +36,9 @@ fn main() -> ! {
         // *shrug.jpg*
         p.GPIO.pin_cnf[1].write(|w| w.dir().output());
 
-        let mut decaying_cursor = DecayingCursor::new(3, 1);
+        let mut canvas = Canvas::new();
+        let mut cursor = Cursor::new(4);
+        let mut decay = Decay::new(1, (4, 4, 4));
 
         loop {
             serial::write_str(&p.UART0, b"flush\r\n");
@@ -53,15 +55,16 @@ fn main() -> ! {
             // }
 
             unsafe {
-                decaying_cursor.step();
+                cursor.step(&mut canvas);
+                decay.step(&mut canvas);
                 // CANVAS.invert();
 
                 // for _ in 0..100_000_0 {
                 //     cortex_m::asm::nop();
                 // }
 
-                // Flush in any case.
-                decaying_cursor.canvas.flush(&p.GPIO);
+                // Flush the data to the strip.
+                canvas.flush(&p.GPIO);
             }
         }
     }
@@ -69,45 +72,63 @@ fn main() -> ! {
     loop {}
 }
 
-struct DecayingCursor {
+struct Cursor {
     /// Every so much ticks cursor moves by 1.
     vel_recip: usize,
-    /// How quickly the trail decays.
-    decay: u8,
-    /// A tick is a measure of time.
     tick: usize,
     pos: usize,
-    canvas: Canvas,
 }
 
-impl DecayingCursor {
-    fn new(vel_recip: usize, decay: u8) -> Self {
-        DecayingCursor {
-            vel_recip,
-            decay,
+impl Cursor {
+    fn new(vel_recip: usize) -> Self {
+        Cursor {
             tick: 0,
+            vel_recip,
             pos: 0,
-            canvas: Canvas::new(),
         }
     }
 
-    fn step(&mut self) {
+    fn step(&mut self, canvas: &mut Canvas) {
         self.tick += 1;
         if self.tick == self.vel_recip {
             // Every N ticks increase the position by 1.
             self.tick = 0;
 
             self.pos += 1;
-            if self.pos == 160 {
+            if self.pos == 60 {
                 self.pos = 0;
             }
         }
 
-        for (i, color) in self.canvas.as_slice_mut().iter_mut().enumerate() {
-            if i == self.pos {
-                *color = Color::white();
-            } else {
-                color.decay(self.decay);
+        // This should be safe to unwrap since we limit the position.
+        *canvas.at_mut(self.pos).unwrap() = Color::white();
+    }
+}
+
+struct Decay {
+    tick: usize,
+    /// How quickly the image decays.
+    vel_recip: usize,
+    decay_amt: (u8, u8, u8),
+}
+
+impl Decay {
+    fn new(vel_recip: usize, decay_amt: (u8, u8, u8)) -> Self {
+        Decay {
+            tick: 0,
+            vel_recip,
+            decay_amt,
+        }
+    }
+
+    fn step(&mut self, canvas: &mut Canvas) {
+        self.tick += 1;
+        if self.tick == self.vel_recip {
+            // Every N ticks decay the colors.
+            self.tick = 0;
+
+            for color in canvas.as_slice_mut().iter_mut() {
+                color.decay(self.decay_amt.0, self.decay_amt.1, self.decay_amt.1);
             }
         }
     }
