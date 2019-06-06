@@ -37,7 +37,8 @@ fn main() -> ! {
         p.GPIO.pin_cnf[1].write(|w| w.dir().output());
 
         let mut canvas = Canvas::new();
-        let mut cursor = Cursor::new(4);
+        let mut cur1 = Cursor::new(30, 8, 1);
+        let mut cur2 = Cursor::new(0, 8, 1);
         let mut decay = Decay::new(1, (4, 4, 4));
 
         loop {
@@ -55,8 +56,9 @@ fn main() -> ! {
             // }
 
             unsafe {
-                cursor.step(&mut canvas);
                 decay.step(&mut canvas);
+                cur1.step(&mut canvas);
+                cur2.step(&mut canvas);
                 // CANVAS.invert();
 
                 // for _ in 0..100_000_0 {
@@ -76,32 +78,38 @@ struct Cursor {
     /// Every so much ticks cursor moves by 1.
     vel_recip: usize,
     tick: usize,
-    pos: usize,
+    pos: isize,
+    dx: isize,
 }
 
 impl Cursor {
-    fn new(vel_recip: usize) -> Self {
+    fn new(offset: usize, vel_recip: usize, dx: isize) -> Self {
         Cursor {
             tick: 0,
             vel_recip,
-            pos: 0,
+            pos: offset as isize,
+            dx,
         }
     }
 
     fn step(&mut self, canvas: &mut Canvas) {
+        const LAST: isize = 59;
+
         self.tick += 1;
         if self.tick == self.vel_recip {
             // Every N ticks increase the position by 1.
             self.tick = 0;
 
-            self.pos += 1;
-            if self.pos == 60 {
+            self.pos = self.pos + self.dx;
+            if self.pos < 0 {
+                self.pos = LAST;
+            } else if self.pos == LAST {
                 self.pos = 0;
             }
         }
 
         // This should be safe to unwrap since we limit the position.
-        *canvas.at_mut(self.pos).unwrap() = Color::white();
+        *canvas.at_mut(self.pos as usize).unwrap() = Color::white();
     }
 }
 
