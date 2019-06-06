@@ -1,3 +1,4 @@
+
 use nrf51822::GPIO;
 
 /// I have 1m 60LEDs. 1 LED consits of 3 sub-LEDs, one for each color.
@@ -5,6 +6,7 @@ const LED_COUNT: usize = 60;
 
 /// A color represented in 24-bit GRB format (the same at the strip).
 #[derive(Copy, Clone)]
+#[repr(packed)]
 pub struct Color {
     pub g: u8,
     pub r: u8,
@@ -12,8 +14,26 @@ pub struct Color {
 }
 
 impl Color {
-    const fn black() -> Color {
+    pub const fn black() -> Color {
         Color { g: 0, r: 0, b: 0 }
+    }
+
+    pub const fn white() -> Color {
+        Color { g: 255, r: 255, b: 255 }
+    }
+
+    /// Invert all components.
+    pub fn invert(&mut self) {
+        self.g = 255 - self.g;
+        self.r = 255 - self.r;
+        self.b = 255 - self.b;
+    }
+
+    /// Substract all components by the specific amount.
+    pub fn decay(&mut self, by: u8) {
+        self.g = self.g.saturating_sub(by);
+        self.r = self.r.saturating_sub(by);
+        self.b = self.b.saturating_sub(by);
     }
 }
 
@@ -26,7 +46,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Canvas {
             pin: 1,
             buf: [Color::black(); LED_COUNT],
@@ -63,7 +83,8 @@ impl Canvas {
                 gpio_clr_ptr,
                 gpio_set_ptr,
                 buf_ptr,
-                BUF_LEN,
+                // HardFault is raised without -1 when reading R4 on send_buffer.S:85, LOL.
+                BUF_LEN - 1,
             );
         }
     }
@@ -73,9 +94,19 @@ impl Canvas {
         self.buf.iter_mut().for_each(|v| *v = Color::black());
     }
 
+    /// Invert all colors.
+    pub fn invert(&mut self) {
+        self.buf.iter_mut().for_each(|v| v.invert());
+    }
+
     /// Get a mutable reference to the color that corresponds to the given position.
     pub fn at_mut(&mut self, idx: usize) -> Option<&mut Color> {
         self.buf.get_mut(idx)
+    }
+
+    /// Returns the backing buffer as a slice.
+    pub fn as_slice_mut(&mut self) -> &mut [Color] {
+        &mut self.buf
     }
 
     /// Set the LED by the given `idx` to the specified `color`.
