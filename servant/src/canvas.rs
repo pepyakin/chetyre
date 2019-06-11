@@ -1,6 +1,5 @@
-
-use nrf51822::GPIO;
 use crate::LED_COUNT;
+use nrf51822::GPIO;
 
 /// A color represented in 24-bit GRB format (the same at the strip).
 #[derive(Copy, Clone)]
@@ -17,7 +16,11 @@ impl Color {
     }
 
     pub const fn white() -> Color {
-        Color { g: 255, r: 255, b: 255 }
+        Color {
+            g: 255,
+            r: 255,
+            b: 255,
+        }
     }
 
     /// Invert all components.

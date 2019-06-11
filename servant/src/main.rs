@@ -2,17 +2,13 @@
 #![no_main]
 
 use cortex_m_rt::entry;
-use panic_halt;
-
-use nrf51822::{
-    Peripherals,
-    UART0,
-};
+use nrf51822::{Peripherals, UART0};
+use panic_halt as _;
 
 mod canvas;
 mod serial;
 
-use canvas::{Color, Canvas};
+use canvas::{Canvas, Color};
 
 /// I have 1m 60LEDs. 1 LED consits of 3 sub-LEDs, one for each color.
 const LED_COUNT: usize = 59;
@@ -98,10 +94,7 @@ struct Impulse {
 
 impl Impulse {
     fn new(period: usize) -> Self {
-        Impulse {
-            tick: 0,
-            period,
-        }
+        Impulse { tick: 0, period }
     }
 
     fn step(&mut self, canvas: &mut Canvas) {
@@ -123,9 +116,7 @@ struct XorShift32Rng {
 
 impl XorShift32Rng {
     pub fn new(seed: u32) -> Self {
-        XorShift32Rng{
-            state: seed,
-        }
+        XorShift32Rng { state: seed }
     }
 
     /// Get the next pseudo random number.
@@ -145,9 +136,7 @@ pub struct RandomDots {
 
 impl RandomDots {
     fn new(num: usize) -> Self {
-        RandomDots {
-            num,
-        }
+        RandomDots { num }
     }
 
     fn step(&self, rng: &mut XorShift32Rng, canvas: &mut Canvas) {
@@ -241,5 +230,7 @@ fn main() -> ! {
         impulses(&p);
     }
 
-    loop {}
+    loop {
+        continue;
+    }
 }
