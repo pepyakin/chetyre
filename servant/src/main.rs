@@ -91,6 +91,31 @@ impl Decay {
     }
 }
 
+struct Impulse {
+    tick: usize,
+    period: usize,
+}
+
+impl Impulse {
+    fn new(period: usize) -> Self {
+        Impulse {
+            tick: 0,
+            period,
+        }
+    }
+
+    fn step(&mut self, canvas: &mut Canvas) {
+        self.tick += 1;
+        if self.tick == self.period {
+            self.tick = 0;
+
+            for color in canvas.as_slice_mut().iter_mut() {
+                *color = Color::white();
+            }
+        }
+    }
+}
+
 /// XorShift32Rng is a very simple PRNG.
 struct XorShift32Rng {
     state: u32,
@@ -181,6 +206,22 @@ fn random_dots(p: &Peripherals) {
     }
 }
 
+fn impulses(p: &Peripherals) {
+    let mut canvas = Canvas::new();
+    let mut impulse = Impulse::new(350);
+    let mut decay = Decay::new(3, (4, 4, 4));
+
+    loop {
+        serial::write_str(&p.UART0, b"flush\r\n");
+
+        impulse.step(&mut canvas);
+        decay.step(&mut canvas);
+
+        // Flush the data to the strip.
+        canvas.flush(&p.GPIO);
+    }
+}
+
 #[entry]
 fn main() -> ! {
     if let Some(p) = Peripherals::take() {
@@ -196,7 +237,8 @@ fn main() -> ! {
         p.GPIO.pin_cnf[1].write(|w| w.dir().output());
 
         // trails_pattern(&p);
-        random_dots(&p);
+        // random_dots(&p);
+        impulses(&p);
     }
 
     loop {}
