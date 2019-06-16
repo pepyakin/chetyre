@@ -21,37 +21,55 @@ fn read_color(uart0: &UART0) -> Color {
     Color { g, r, b }
 }
 
-struct Cursor {
-    /// Every so much ticks cursor moves by 1.
-    vel_recip: usize,
+struct Timer {
     tick: usize,
+    period: usize,
+}
+
+impl Timer {
+    fn new(period: usize) -> Self {
+        Timer { tick: 0, period }
+    }
+
+    fn tick<F: FnOnce()>(&mut self, f: F) {
+        self.tick += 1;
+        if self.tick == self.period {
+            self.tick = 0;
+            f()
+        }
+    }
+}
+
+struct Cursor {
+    timer: Timer,
     pos: isize,
     dx: isize,
 }
 
 impl Cursor {
+    /// offset - starting position.
+    /// vel_recip - number of ticks after which cursor moves by 1.
+    /// dx - direction of movement.
     fn new(offset: usize, vel_recip: usize, dx: isize) -> Self {
         Cursor {
-            tick: 0,
-            vel_recip,
+            timer: Timer::new(vel_recip),
             pos: offset as isize,
             dx,
         }
     }
 
     fn step(&mut self, canvas: &mut Canvas) {
-        self.tick += 1;
-        if self.tick == self.vel_recip {
-            // Every N ticks increase the position by 1.
-            self.tick = 0;
+        let pos = &mut self.pos;
+        let dx = self.dx;
 
-            self.pos = self.pos + self.dx;
-            if self.pos < 0 {
-                self.pos = LED_COUNT as isize;
-            } else if self.pos == LED_COUNT as isize {
-                self.pos = 0;
+        self.timer.tick(|| {
+            *pos = *pos + dx;
+            if *pos < 0 {
+                *pos = LED_COUNT as isize;
+            } else if *pos == LED_COUNT as isize {
+                *pos = 0;
             }
-        }
+        });
 
         // This should be safe to unwrap since we limit the position.
         *canvas.at_mut(self.pos as usize).unwrap() = Color::white();
@@ -59,53 +77,45 @@ impl Cursor {
 }
 
 struct Decay {
-    tick: usize,
-    /// How quickly the image decays.
-    vel_recip: usize,
+    timer: Timer,
     decay_amt: (u8, u8, u8),
 }
 
 impl Decay {
     fn new(vel_recip: usize, decay_amt: (u8, u8, u8)) -> Self {
         Decay {
-            tick: 0,
-            vel_recip,
+            timer: Timer::new(vel_recip),
             decay_amt,
         }
     }
 
     fn step(&mut self, canvas: &mut Canvas) {
-        self.tick += 1;
-        if self.tick == self.vel_recip {
-            // Every N ticks decay the colors.
-            self.tick = 0;
-
+        let decay_amt = &self.decay_amt;
+        self.timer.tick(|| {
             for color in canvas.as_slice_mut().iter_mut() {
-                color.decay(self.decay_amt.0, self.decay_amt.1, self.decay_amt.2);
+                color.decay(decay_amt.0, decay_amt.1, decay_amt.2);
             }
-        }
+        });
     }
 }
 
 struct Impulse {
-    tick: usize,
-    period: usize,
+    timer: Timer,
 }
 
 impl Impulse {
     fn new(period: usize) -> Self {
-        Impulse { tick: 0, period }
+        Impulse {
+            timer: Timer::new(period),
+        }
     }
 
     fn step(&mut self, canvas: &mut Canvas) {
-        self.tick += 1;
-        if self.tick == self.period {
-            self.tick = 0;
-
+        self.timer.tick(|| {
             for color in canvas.as_slice_mut().iter_mut() {
                 *color = Color::white();
             }
-        }
+        });
     }
 }
 
@@ -152,7 +162,7 @@ impl RandomDots {
 fn trails_pattern(p: &Peripherals) {
     let mut canvas = Canvas::new();
     let mut cur1 = Cursor::new(30, 8, 1);
-    let mut cur2 = Cursor::new(0, 8, 1);
+    // let mut cur2 = Cursor::new(0, 8, 1);
     let mut decay = Decay::new(1, (4, 4, 4));
 
     loop {
@@ -160,7 +170,7 @@ fn trails_pattern(p: &Peripherals) {
 
         decay.step(&mut canvas);
         cur1.step(&mut canvas);
-        cur2.step(&mut canvas);
+        // cur2.step(&mut canvas);
         // CANVAS.invert();
 
         // for _ in 0..100_000_0 {
@@ -200,11 +210,14 @@ fn impulses(p: &Peripherals) {
     let mut impulse = Impulse::new(350);
     let mut decay = Decay::new(3, (4, 4, 4));
 
+    let mut impulse_timer = Timer::new(350);
+    let mut decay_timer = Timer::new(3);
+
     loop {
         serial::write_str(&p.UART0, b"flush\r\n");
 
-        impulse.step(&mut canvas);
-        decay.step(&mut canvas);
+        impulse_timer.tick(|| impulse.step(&mut canvas));
+        decay_timer.tick(|| decay.step(&mut canvas));
 
         // Flush the data to the strip.
         canvas.flush(&p.GPIO);
@@ -226,8 +239,8 @@ fn main() -> ! {
         p.GPIO.pin_cnf[1].write(|w| w.dir().output());
 
         // trails_pattern(&p);
-        // random_dots(&p);
-        impulses(&p);
+        random_dots(&p);
+        // impulses(&p);
     }
 
     loop {
